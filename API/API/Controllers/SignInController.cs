@@ -1,7 +1,9 @@
-﻿using API.Fido2;
+﻿using API.Data;
+using API.Data.DTOs;
+using API.Fido2;
+using API.Services;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -12,20 +14,20 @@ public class SignInController : Controller
 {
     private readonly Fido2NetLib.Fido2 _lib;
     private readonly Fido2Store _fido2Store;
-    private readonly UserManager<IdentityUser> _userManager;
-    private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly IUserRepository _userRepository;
+    private readonly ITokenService _tokenService;
     private readonly IOptions<Fido2Configuration> _optionsFido2Configuration;
 
     public SignInController(
         Fido2Store fido2Store,
-        UserManager<IdentityUser> userManager,
-        SignInManager<IdentityUser> signInManager,
+        UserRepository userRepository,
+        TokenService tokenService,
         IOptions<Fido2Configuration> optionsFido2Configuration)
     {
-        _userManager = userManager;
+        _userRepository = userRepository;
+        _tokenService = tokenService;
         _optionsFido2Configuration = optionsFido2Configuration;
-        _signInManager = signInManager;
-        _userManager = userManager;
+        _userRepository = userRepository;
         _fido2Store = fido2Store;
 
         _lib = new Fido2NetLib.Fido2(new Fido2Configuration()
@@ -39,35 +41,35 @@ public class SignInController : Controller
 
     private static string FormatException(Exception e)
     {
-        return string.Format("{0}{1}", e.Message, e.InnerException != null ? " (" + e.InnerException.Message + ")" : "");
+        return string.Format("{0}{1}", e.Message,
+            e.InnerException != null ? " (" + e.InnerException.Message + ")" : "");
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Route("/pwassertionOptions")]
+    [Route("/assertionOptions")]
     public async Task<ActionResult> AssertionOptionsPost([FromForm] string username, [FromForm] string userVerification)
     {
         try
         {
-
             var existingCredentials = new List<PublicKeyCredentialDescriptor>();
 
             if (!string.IsNullOrEmpty(username))
             {
-                var identityUser = await _userManager.FindByNameAsync(username);
-                if (identityUser == null) throw new ArgumentException("Username not found");
+                var dbUser = await _userRepository.GetUserByUsername(username);
+                if (dbUser == null) return BadRequest("Invalid username");
 
                 var user = new Fido2User
                 {
-                    DisplayName = identityUser!.UserName,
-                    Name = identityUser.UserName,
-                    Id = Fido2Store.GetUserNameInBytes(identityUser.UserName) // byte representation of userID is required
+                    DisplayName = dbUser.DisplayName,
+                    Name = dbUser.UserName,
+                    Id = Fido2Store.GetUserNameInBytes(dbUser.UserName) // byte representation of userID is required
                 };
 
                 if (user == null) throw new ArgumentException("Username was not registered");
 
                 // 2. Get registered credentials from database
-                var items = await _fido2Store.GetCredentialsByUserNameAsync(identityUser.UserName);
+                var items = await _fido2Store.GetCredentialsByUserNameAsync(dbUser.UserName);
                 existingCredentials = items.Select(c => c.Descriptor).NotNull().ToList();
             }
 
@@ -77,7 +79,9 @@ public class SignInController : Controller
             };
 
             // 3. Create options
-            var uv = string.IsNullOrEmpty(userVerification) ? UserVerificationRequirement.Discouraged : userVerification.ToEnum<UserVerificationRequirement>();
+            var uv = string.IsNullOrEmpty(userVerification)
+                ? UserVerificationRequirement.Discouraged
+                : userVerification.ToEnum<UserVerificationRequirement>();
             var options = _lib.GetAssertionOptions(
                 existingCredentials,
                 uv,
@@ -99,8 +103,8 @@ public class SignInController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Route("/pwmakeAssertion")]
-    public async Task<JsonResult> MakeAssertion([FromBody] AuthenticatorAssertionRawResponse clientResponse)
+    [Route("/makeAssertion")]
+    public async Task<ActionResult<UserDto>> MakeAssertion([FromBody] AuthenticatorAssertionRawResponse clientResponse)
     {
         try
         {
@@ -138,16 +142,21 @@ public class SignInController : Controller
             // 6. Store the updated counter
             await _fido2Store.UpdateCounterAsync(res.CredentialId, res.Counter);
 
-            var identityUser = await _userManager.FindByNameAsync(creds.UserName);
-            if (identityUser == null)
+            var user = await _userRepository.GetUserByUsername(creds.UserName);
+            if (user == null)
             {
                 throw new InvalidOperationException($"Unable to load user.");
             }
 
-            await _signInManager.SignInAsync(identityUser, isPersistent: false);
+            var token = await _tokenService.CreateToken(user);
 
             // 7. return OK to client
-            return Json(res);
+            return new UserDto
+            {
+                UserName = user.UserName,
+                DisplayName = user.DisplayName ?? user.UserName,
+                Token = token
+            };
         }
         catch (Exception e)
         {

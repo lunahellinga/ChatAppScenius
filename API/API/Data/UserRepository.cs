@@ -6,7 +6,7 @@ namespace API.Data;
 
 public interface IUserRepository
 {
-    Task<User> GetUserByUsername(string username);
+    Task<User?> GetUserByUsername(string username);
     Task<User> CreateOrFind(string username);
 }
 
@@ -19,9 +19,9 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public Task<User> GetUserByUsername(string username)
+    public async Task<User?> GetUserByUsername(string username)
     {
-        throw new NotImplementedException();
+        return await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
     }
 
     public async Task<User> CreateOrFind(string username)

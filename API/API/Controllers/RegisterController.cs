@@ -20,7 +20,7 @@ public class RegisterController : Controller
 
     public RegisterController(
         Fido2Store fido2Store,
-        IOptions<Fido2Configuration> optionsFido2Configuration, IUserRepository userRepository)
+        IOptions<Fido2Configuration> optionsFido2Configuration, UserRepository userRepository)
     {
         _optionsFido2Configuration = optionsFido2Configuration;
         _userRepository = userRepository;
@@ -43,7 +43,7 @@ public class RegisterController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Route("/pwmakeCredentialOptions")]
+    [Route("/makeCredentialOptions")]
     public async Task<JsonResult> MakeCredentialOptions([FromForm] string username, [FromForm] string displayName,
         [FromForm] string attType, [FromForm] string authType, [FromForm] bool requireResidentKey,
         [FromForm] string userVerification)
@@ -104,7 +104,7 @@ public class RegisterController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Route("/pwmakeCredential")]
+    [Route("/makeCredential")]
     public async Task<JsonResult> MakeCredential([FromBody] AuthenticatorAttestationRawResponse attestationResponse)
     {
         try
