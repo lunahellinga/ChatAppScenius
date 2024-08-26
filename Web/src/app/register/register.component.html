@@ -1,10 +1,14 @@
 
 
-<form>
-  <h1>Register</h1>
-  <div>
-    <label for="name">Name: </label>
-    <input id="name" type="text" [formControl]="name">
+<form class="m-5 p-5 gap-3 rounded-md w-52 bg-slate-600 text-white flex flex-col justify-center" [formGroup]="registerForm" (ngSubmit)="register()">
+  <h1 class="text-center text-xl">Register</h1>
+  <div class="p-2 flex flex-col">
+    <label class="text-sm text-slate-100" for="name">Name: </label>
+    <input class="bg-gray-200 border-2 border-slate-400 rounded-md" id="name" type="text" [formControl]="registerForm.controls.name">
   </div>
-  <button type="submit" >Register</button>
+  <div class="p-2 flex flex-col">
+    <label class="text-sm text-slate-100" for="displayName">Display name </label>
+    <input class="bg-gray-200 border-2 border-slate-400 rounded-md" id="displayName" type="text" [formControl]="registerForm.controls.displayName">
+  </div>
+  <button class="border-2 bg-slate-900 rounded-md " type="submit" [disabled]="!registerForm.valid" >Register</button>
 </form>
