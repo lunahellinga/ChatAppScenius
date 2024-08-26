@@ -1,10 +1,10 @@
-﻿using API.Fido2;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using API.Data.Models;
+using API.Fido2;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Data;
 
-public class ApplicationDbContext : IdentityDbContext
+public class ApplicationDbContext : DbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -12,6 +12,7 @@ public class ApplicationDbContext : IdentityDbContext
     }
 
     public DbSet<FidoStoredCredential> FidoStoredCredential => Set<FidoStoredCredential>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

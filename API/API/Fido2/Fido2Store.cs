@@ -89,8 +89,8 @@ public class Fido2Store
         }
 
         return await _applicationDbContext.Users
-                .Where(u => u.UserName != null && Fido2Store.GetUserNameInBytes(u.UserName)
-                .SequenceEqual(cred.UserId))
+                .Where(u => GetUserNameInBytes(u.UserName)
+                    .SequenceEqual(cred.UserId))
                 .Select(u => new Fido2User
                 {
                     DisplayName = u.UserName,

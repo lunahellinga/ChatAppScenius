@@ -1,7 +1,8 @@
-﻿using API.Fido2;
+﻿using API.Data;
+using API.Data.Models;
+using API.Fido2;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using static Fido2NetLib.Fido2;
@@ -13,17 +14,16 @@ public class RegisterController : Controller
 {
     private readonly Fido2NetLib.Fido2 _lib;
     private readonly Fido2Store _fido2Store;
-    private readonly UserManager<IdentityUser> _userManager;
     private readonly IOptions<Fido2Configuration> _optionsFido2Configuration;
+    private readonly IUserRepository _userRepository;
 
 
     public RegisterController(
         Fido2Store fido2Store,
-        UserManager<IdentityUser> userManager,
-        IOptions<Fido2Configuration> optionsFido2Configuration)
+        IOptions<Fido2Configuration> optionsFido2Configuration, IUserRepository userRepository)
     {
-        _userManager = userManager;
         _optionsFido2Configuration = optionsFido2Configuration;
+        _userRepository = userRepository;
         _fido2Store = fido2Store;
 
         _lib = new Fido2NetLib.Fido2(new Fido2Configuration()
@@ -37,13 +37,16 @@ public class RegisterController : Controller
 
     private static string FormatException(Exception e)
     {
-        return string.Format("{0}{1}", e.Message, e.InnerException != null ? " (" + e.InnerException.Message + ")" : "");
+        return string.Format("{0}{1}", e.Message,
+            e.InnerException != null ? " (" + e.InnerException.Message + ")" : "");
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Route("/pwmakeCredentialOptions")]
-    public async Task<JsonResult> MakeCredentialOptions([FromForm] string username, [FromForm] string displayName, [FromForm] string attType, [FromForm] string authType, [FromForm] bool requireResidentKey, [FromForm] string userVerification)
+    public async Task<JsonResult> MakeCredentialOptions([FromForm] string username, [FromForm] string displayName,
+        [FromForm] string attType, [FromForm] string authType, [FromForm] bool requireResidentKey,
+        [FromForm] string userVerification)
     {
         try
         {
@@ -84,7 +87,8 @@ public class RegisterController : Controller
                 UserVerificationMethod = true,
             };
 
-            var options = _lib.RequestNewCredential(user, existingKeys, authenticatorSelection, attType.ToEnum<AttestationConveyancePreference>(), exts);
+            var options = _lib.RequestNewCredential(user, existingKeys, authenticatorSelection,
+                attType.ToEnum<AttestationConveyancePreference>(), exts);
 
             // 4. Temporarily store options, session/in-memory cache/redis/db
             HttpContext.Session.SetString("fido2.attestationOptions", options.ToJson());
@@ -154,32 +158,15 @@ public class RegisterController : Controller
         }
     }
 
-    private async Task<IdentityUser?> CreateOrFindUser(string userEmail)
+    private async Task<User?> CreateOrFindUser(string username)
     {
-        var user = new IdentityUser { UserName = userEmail, Email = userEmail, EmailConfirmed = false };
-
-        var result = await _userManager.CreateAsync(user);
-        if (result.Succeeded)
+        try
         {
-            // new user created
-            return user;
+            return await _userRepository.CreateOrFind(username);
         }
-        else
+        catch (Exception e)
         {
-            try
-            {
-                if (result.Errors.Single(e => e.Code.Equals("DuplicateUserName")) != null)
-                {
-                    // user already exists, which is OK for our purposes
-                    return user;
-                }
-            }
-            catch (Exception)
-            {
-                // other error (e.g. malformed username)
-                return null;
-            }
+            return null;
         }
-        return null;
     }
 }
