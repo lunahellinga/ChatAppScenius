@@ -56,7 +56,7 @@ public class ChatHub : Hub
             new ReadMessageDto
             {
                 Message = message.Message, Timestamp = message.Timestamp,
-                SenderDisplayName = sender.DisplayName ?? sender.UserName
+                Sender = sender.DisplayName ?? sender.UserName
             });
     }
 }

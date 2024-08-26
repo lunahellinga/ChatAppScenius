@@ -1,19 +1,21 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from "@angular/common/http";
-import {map} from "rxjs/operators";
 import {User} from "../_models/user";
 import {environment} from "../../environment";
-import {Form} from "@angular/forms";
+import {ReplaySubject} from "rxjs";
+import {coerceToArrayBuffer, coerceToBase64Url} from "../helpers";
+import {Router} from "@angular/router";
+import {routes} from "../app.routes";
 
 @Injectable({
   providedIn: 'root'
 })
 export class AccountService {
   baseUrl = environment.apiUrl;
-  private currentUserSource = new ReplaySubject<User>(1);
+  private currentUserSource = new ReplaySubject<User|null>(1);
   currentUser$ = this.currentUserSource.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(private router: Router) {
   }
 
   async handleRegisterSubmit(userName: string, displayName: string) {
@@ -42,21 +44,18 @@ export class AccountService {
     // send to server for registering
     let makeCredentialOptions;
     try {
-      makeCredentialOptions = await fetchMakeCredentialOptions(data);
+      makeCredentialOptions = await this.fetchMakeCredentialOptions(data);
 
     } catch (e) {
       console.error(e);
       let msg = "Something wen't really wrong";
-      showErrorAlert(msg);
     }
-
 
     console.log("Credential Options Object", makeCredentialOptions);
 
     if (makeCredentialOptions.status !== "ok") {
       console.log("Error creating credential options");
       console.log(makeCredentialOptions.errorMessage);
-      showErrorAlert(makeCredentialOptions.errorMessage);
       return;
     }
 
@@ -65,7 +64,7 @@ export class AccountService {
     // Turn ID into a UInt8Array Buffer for some reason
     makeCredentialOptions.user.id = coerceToArrayBuffer(makeCredentialOptions.user.id);
 
-    makeCredentialOptions.excludeCredentials = makeCredentialOptions.excludeCredentials.map((c) => {
+    makeCredentialOptions.excludeCredentials = makeCredentialOptions.excludeCredentials.map((c: any) => {
       c.id = coerceToArrayBuffer(c.id);
       return c;
     });
@@ -84,22 +83,21 @@ export class AccountService {
     } catch (e) {
       var msg = "Could not create credentials in browser. Probably because the username is already registered with your authenticator. Please change username or authenticator."
       console.error(msg, e);
-      showErrorAlert(msg, e);
     }
 
 
     console.log("PublicKeyCredential Created", newCredential);
 
     try {
-      registerNewCredential(newCredential);
+      this.registerNewCredential(newCredential);
 
     } catch (e) {
-      showErrorAlert(err.message ? err.message : err);
+      console.log(e)
     }
   }
 
   async fetchMakeCredentialOptions(formData: FormData) {
-    let response = await fetch('/pwmakeCredentialOptions', {
+    let response = await fetch(this.baseUrl + '/pakeCredentialOptions', {
       method: 'POST', // or 'PUT'
       body: formData, // data can be `string` or {object}!
       headers: {
@@ -114,7 +112,7 @@ export class AccountService {
 
 
   // This should be used to verify the auth data with the server
-  async registerNewCredential(newCredential) {
+  async registerNewCredential(newCredential: any) {
     // Move data into Arrays incase it is super long
     let attestationObject = new Uint8Array(newCredential.response.attestationObject);
     let clientDataJSON = new Uint8Array(newCredential.response.clientDataJSON);
@@ -133,9 +131,9 @@ export class AccountService {
 
     let response;
     try {
-      response = await registerCredentialWithServer(data);
+      response = await this.registerCredentialWithServer(data);
     } catch (e) {
-      showErrorAlert(e);
+      console.log(e)
     }
 
     console.log("Credential Object", response);
@@ -144,7 +142,6 @@ export class AccountService {
     if (response.status !== "ok") {
       console.log("Error creating credential");
       console.log(response.errorMessage);
-      showErrorAlert(response.errorMessage);
       return;
     }
 
@@ -152,8 +149,8 @@ export class AccountService {
     //window.location.href = "/dashboard/" + state.user.displayName;
   }
 
-  async registerCredentialWithServer(formData: FormData) {
-    let response = await fetch('/pwmakeCredential', {
+  async registerCredentialWithServer(formData: any) {
+    let response = await fetch(this.baseUrl + '/makeCredential', {
       method: 'POST', // or 'PUT'
       body: JSON.stringify(formData), // data can be `string` or {object}!
       headers: {
@@ -176,7 +173,7 @@ export class AccountService {
     // send to server for registering
     let makeAssertionOptions;
     try {
-      const res = await fetch('/pwassertionOptions', {
+      const res = await fetch(this.baseUrl + '/assertionOptions', {
         method: 'POST', // or 'PUT'
         body: formData, // data can be `string` or {object}!
         headers: {
@@ -203,7 +200,7 @@ export class AccountService {
     makeAssertionOptions.challenge = Uint8Array.from(atob(challenge), c => c.charCodeAt(0));
 
     // fix escaping. Change this to coerce
-    makeAssertionOptions.allowCredentials.forEach(function (listItem) {
+    makeAssertionOptions.allowCredentials.forEach(function (listItem: any) {
       const fixedId = listItem.id.replace(/\_/g, "/").replace(/\-/g, "+");
       listItem.id = Uint8Array.from(atob(fixedId), c => c.charCodeAt(0));
     });
@@ -214,19 +211,19 @@ export class AccountService {
     // ask browser for credentials (browser will ask connected authenticators)
     let credential;
     try {
-      credential = await navigator.credentials.get({ publicKey: makeAssertionOptions })
+      credential = await navigator.credentials.get({publicKey: makeAssertionOptions})
     } catch (err) {
       console.log(err)
     }
 
     try {
-      await verifyAssertionWithServer(credential);
+      await this.verifyAssertionWithServer(credential);
     } catch (e) {
-      showErrorAlert("Could not verify assertion", e);
+      console.log(e)
     }
   }
 
-  async verifyAssertionWithServer(assertedCredential: ) {
+  async verifyAssertionWithServer(assertedCredential: any) {
 
     // Move data into Arrays incase it is super long
     let authData = new Uint8Array(assertedCredential.response.authenticatorData);
@@ -247,7 +244,7 @@ export class AccountService {
 
     let response;
     try {
-      let res = await fetch("/pwmakeAssertion", {
+      let res = await fetch(this.baseUrl + "/makeAssertion", {
         method: 'POST', // or 'PUT'
         body: JSON.stringify(data), // data can be `string` or {object}!
         headers: {
@@ -258,7 +255,7 @@ export class AccountService {
 
       response = await res.json();
     } catch (e) {
-      showErrorAlert("Request to server failed", e);
+      console.log(e)
       throw e;
     }
 
@@ -268,25 +265,16 @@ export class AccountService {
     if (response.status !== "ok") {
       console.log("Error doing assertion");
       console.log(response.errorMessage);
-      showErrorAlert(response.errorMessage);
+      console.log(response.errorMessage)
       return;
     }
-
-    // show success message
-    await Swal.fire({
-      title: 'Logged In!',
-      text: 'You\'re logged in successfully.',
-      type: 'success',
-      timer: 2000
-    });
-
-    window.location.href = "/index";
+    else {
+      this.setCurrentUser(response.user);
+    }
   }
 
+
   setCurrentUser(user: User) {
-    user.roles = [];
-    const roles = this.getDecodedToken(user.token).role;
-    Array.isArray(roles) ? user.roles = roles : user.roles.push(roles);
     localStorage.setItem('user', JSON.stringify(user));
     this.currentUserSource.next(user);
   }
@@ -294,10 +282,9 @@ export class AccountService {
   logout() {
     localStorage.removeItem('user');
     this.currentUserSource.next(null);
-    this.presenceService.stopHubConnection();
   }
 
-  getDecodedToken(token) {
+  getDecodedToken(token: any) {
     return JSON.parse(atob(token.split('.')[1]));
   }
 }

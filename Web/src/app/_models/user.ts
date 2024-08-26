@@ -3,3 +3,8 @@ export interface User {
   displayName: string,
   token: string
 }
+
+export interface Credential {
+  credentialId: Uint8Array;
+  publicKey: Uint8Array;
+}

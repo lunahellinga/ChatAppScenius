@@ -4,7 +4,7 @@
 
 - [ ] WebAuthn
 - [ ] Stateless session management
-- [ ] SignalR chatroom
+- [x] SignalR chatroom
 - [ ] (opt) Unit test
 
 ## Web
