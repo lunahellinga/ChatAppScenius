@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\API\\API.csproj": {}
+    "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\WebApplication1\\WebApplication1.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\API\\API.csproj": {
+    "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\WebApplication1\\WebApplication1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\API\\API.csproj",
-        "projectName": "API",
-        "projectPath": "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\API\\API.csproj",
+        "projectUniqueName": "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\WebApplication1\\WebApplication1.csproj",
+        "projectName": "WebApplication1",
+        "projectPath": "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\WebApplication1\\WebApplication1.csproj",
         "packagesPath": "C:\\Users\\Gast\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\API\\obj\\",
+        "outputPath": "C:\\Users\\Gast\\Documents\\ChatAppScenius\\API\\WebApplication1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Gast\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -43,20 +43,6 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
-            "Fido2.AspNet": {
-              "target": "Package",
-              "version": "[3.0.1, )"
-            },
-            "Microsoft.EntityFrameworkCore": {
-              "target": "Package",
-              "version": "[8.0.8, )"
-            },
-            "Microsoft.EntityFrameworkCore.Design": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[8.0.8, )"
-            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.4.0, )"
